@@ -101,87 +101,24 @@ void AudioPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPer
     mainProcessor->clear();
 
     //==============================================================================
-    using process::Channel::Left, process::Channel::Right;
-
     audioInputNode = mainProcessor->addNode(std::make_unique<IOProcessor>(IOProcessor::audioInputNode));
-
     preProcessorNode = mainProcessor->addNode(std::make_unique<process::PreProcessor>(apvts));
-
-    // TODO: refactor these bullshits to dedicated fx/mixer processor components.
-    // NOTE: necessary for pre-post fx switching
-    leftPreGainUnitNode = mainProcessor->addNode(std::make_unique<process::MixerProcessor<Left, Left>>(apvts));
-    leftToRightGainUnitNode = mainProcessor->addNode(std::make_unique<process::MixerProcessor<Left, Right>>(apvts));
-    rightToLeftGainUnitNode = mainProcessor->addNode(std::make_unique<process::MixerProcessor<Right, Left>>(apvts));
-    rightPreGainUnitNode = mainProcessor->addNode(std::make_unique<process::MixerProcessor<Right, Right>>(apvts));
-
-    // leftPostProcessorNode = mainProcessor->addNode(std::make_unique<process::PostProcessor<Left>>(apvts));
-    // rightPostProcessorNode = mainProcessor->addNode(std::make_unique<process::PostProcessor<Right>>(apvts));
-
+    mixerProcessorNode = mainProcessor->addNode(std::make_unique<process::MixerProcessor>(apvts));
     audioOutputNode = mainProcessor->addNode(std::make_unique<IOProcessor>(IOProcessor::audioOutputNode));
 
-    //==============================================================================
     for (int ch = 0; ch < 2; ++ch) {
-        // IN -> PRE
-        mainProcessor->addConnection({ {audioInputNode->nodeID, ch},
-                                       {preProcessorNode->nodeID, ch} });
-
-        if (ch == Left) {
-            // Pre.L -> LL
-            mainProcessor->addConnection({{preProcessorNode->nodeID, ch}, 
-                                          {leftPreGainUnitNode->nodeID, 0}});
-
-            // Pre.L -> LR
-            mainProcessor->addConnection({{preProcessorNode->nodeID, ch},
-                                          {leftToRightGainUnitNode->nodeID, 0}});
-            
-            // LL => OUT.L
-            mainProcessor->addConnection({{leftPreGainUnitNode->nodeID, 0},                
-                                          {audioOutputNode->nodeID, ch}});
-            
-            // RL => OUT.L
-            mainProcessor->addConnection({{rightToLeftGainUnitNode->nodeID, 0},                
-                                          {audioOutputNode->nodeID, ch}});
-        } else {
-            // Pre.R -> RR
-            mainProcessor->addConnection({{preProcessorNode->nodeID, ch},
-                                          {rightPreGainUnitNode->nodeID, 0}});
-
-            // Pre.R -> RL
-            mainProcessor->addConnection({{preProcessorNode->nodeID, ch},
-                                          {rightToLeftGainUnitNode->nodeID, 0}});
-            
-            // RR => OUT.R
-            mainProcessor->addConnection({{rightPreGainUnitNode->nodeID, 0},                
-                                          {audioOutputNode->nodeID, ch}});
-
-            // LR => OUT.R
-            mainProcessor->addConnection({{leftToRightGainUnitNode->nodeID, 0},                
-                                          {audioOutputNode->nodeID, ch}});
-        }
-
-        // // LL => Post.L
-        // mainProcessor->addConnection({{leftPreGainUnitNode->nodeID, 0},
-        //                               {leftPostProcessorNode->nodeID, ch}});
-
-        // // RL => Post.L
-        // mainProcessor->addConnection({{rightToLeftGainUnitNode->nodeID, 0},
-        //                               {leftPostProcessorNode->nodeID, ch}});
-
-        // // RR => Post.R
-        // mainProcessor->addConnection({{rightPreGainUnitNode->nodeID, 0},
-        //                               {rightPostProcessorNode->nodeID, ch}});
-
-        // // LR => Post.R
-        // mainProcessor->addConnection({{leftToRightGainUnitNode->nodeID, 0},
-        //                               {rightPostProcessorNode->nodeID, ch}});
-
-        // // Post.L -> OUT
-        // mainProcessor->addConnection({{leftPostProcessorNode->nodeID, ch},
-        //                              {audioOutputNode->nodeID, ch}});
-
-        // // Post.R -> OUT
-        // mainProcessor->addConnection({{rightPostProcessorNode->nodeID, ch},
-        //                               {audioOutputNode->nodeID, ch}});
+        mainProcessor->addConnection({
+            {audioInputNode->nodeID, ch},
+            {preProcessorNode->nodeID, ch},
+        });
+        mainProcessor->addConnection({
+            {preProcessorNode->nodeID, ch},
+            {mixerProcessorNode->nodeID, ch},
+        });
+        mainProcessor->addConnection({
+            {mixerProcessorNode->nodeID, ch},
+            {audioOutputNode->nodeID, ch},
+        });
     }
 }
 
@@ -219,8 +156,6 @@ bool AudioPluginAudioProcessor::isBusesLayoutSupported (const BusesLayout& layou
 void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                                               juce::MidiBuffer& midiMessages)
 {
-    juce::ignoreUnused (midiMessages);
-
     juce::ScopedNoDenormals noDenormals;
     auto totalNumInputChannels  = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();

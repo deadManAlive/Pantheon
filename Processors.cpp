@@ -1,6 +1,7 @@
 #include "Processors.h"
 
 namespace process {
+    //==============================================================================
     PreProcessor::PreProcessor(AudioProcessorValueTreeState& apvts)
         : parameters(apvts)
     {
@@ -34,5 +35,75 @@ namespace process {
 
         const auto panValue = parameters.getRawParameterValue("inputPan")->load();
         preProcessorChain.get<1>().setPan(panValue);
+    }
+
+    //==============================================================================
+    MixerProcessor::MixerProcessor(AudioProcessorValueTreeState& apvts)
+        : parameters(apvts)
+        , mixerProcessor(new AudioProcessorGraph{})
+    {
+    }
+
+    void MixerProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
+        //==============================================================================
+        mixerProcessor->setPlayConfigDetails(getMainBusNumInputChannels(),
+                                        getMainBusNumOutputChannels(),
+                                        sampleRate, samplesPerBlock);
+        mixerProcessor->prepareToPlay(sampleRate, samplesPerBlock);
+        mixerProcessor->clear();
+
+        //==============================================================================
+        audioInputNode = mixerProcessor->addNode(std::make_unique<IOProcessor>(IOProcessor::audioInputNode));
+        audioOutputNode = mixerProcessor->addNode(std::make_unique<IOProcessor>(IOProcessor::audioOutputNode));
+
+        leftPreGainUnitNode = mixerProcessor->addNode(std::make_unique<MixerUnit<Left, Left>>(parameters));
+        leftToRightGainUnitNode = mixerProcessor->addNode(std::make_unique<MixerUnit<Left, Right>>(parameters));
+        rightToLeftGainUnitNode = mixerProcessor->addNode(std::make_unique<MixerUnit<Right, Left>>(parameters));
+        rightPreGainUnitNode = mixerProcessor->addNode(std::make_unique<MixerUnit<Right, Right>>(parameters));
+
+        //==============================================================================
+        for (int ch = 0; ch < 2; ++ch) {
+            if (ch == Left) {
+                // IN.L -> LL
+                mixerProcessor->addConnection({{audioInputNode->nodeID, ch}, 
+                                            {leftPreGainUnitNode->nodeID, 0}});
+
+                // IN.L -> LR
+                mixerProcessor->addConnection({{audioInputNode->nodeID, ch},
+                                            {leftToRightGainUnitNode->nodeID, 0}});
+                
+                // LL => OUT.L
+                mixerProcessor->addConnection({{leftPreGainUnitNode->nodeID, 0},                
+                                            {audioOutputNode->nodeID, ch}});
+                
+                // RL => OUT.L
+                mixerProcessor->addConnection({{rightToLeftGainUnitNode->nodeID, 0},                
+                                            {audioOutputNode->nodeID, ch}});
+            } else {
+                // IN.R -> RR
+                mixerProcessor->addConnection({{audioInputNode->nodeID, ch},
+                                            {rightPreGainUnitNode->nodeID, 0}});
+
+                // IN.R -> RL
+                mixerProcessor->addConnection({{audioInputNode->nodeID, ch},
+                                            {rightToLeftGainUnitNode->nodeID, 0}});
+                
+                // RR => OUT.R
+                mixerProcessor->addConnection({{rightPreGainUnitNode->nodeID, 0},                
+                                            {audioOutputNode->nodeID, ch}});
+
+                // LR => OUT.R
+                mixerProcessor->addConnection({{leftToRightGainUnitNode->nodeID, 0},                
+                                            {audioOutputNode->nodeID, ch}});
+            }
+        }
+    }
+
+    void MixerProcessor::processBlock(AudioSampleBuffer& buffer, MidiBuffer& midiMessages) {
+        mixerProcessor->processBlock(buffer, midiMessages);
+    }
+
+    void MixerProcessor::reset() {
+        mixerProcessor->reset();
     }
 }

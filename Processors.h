@@ -2,6 +2,7 @@
 
 #include "juce_core/system/juce_PlatformDefs.h"
 #include <JuceHeader.h>
+#include <memory>
 
 //==============================================================================
 class PantheonProcessorBase  : public juce::AudioProcessor
@@ -70,9 +71,9 @@ namespace process {
     };
 
     template <Channel SOURCE, Channel TARGET>
-    class MixerProcessor : public PantheonProcessorBase {
+    class MixerUnit : public PantheonProcessorBase {
     public:
-        MixerProcessor(AudioProcessorValueTreeState& apvts)
+        MixerUnit(AudioProcessorValueTreeState& apvts)
             : PantheonProcessorBase(BusesProperties().withInput ("Input", juce::AudioChannelSet::mono())
                                            .withOutput ("Output", juce::AudioChannelSet::mono()))
             , parameters(apvts)
@@ -99,7 +100,7 @@ namespace process {
             gain.reset();
         }
 
-        const String getName() const override {return "Mixer";}
+        const String getName() const override {return "MixerUnit";}
 
     private:
         //==============================================================================
@@ -118,6 +119,8 @@ namespace process {
             const auto gainValue = parameters.getRawParameterValue(z)->load();
             gain.setGainLinear(gainValue);
         }
+
+        JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MixerUnit)
     };
 
     // //==============================================================================
@@ -169,4 +172,34 @@ namespace process {
     //     //==============================================================================
     //     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PostProcessor)
     // };
+
+    //==============================================================================
+    class MixerProcessor : public PantheonProcessorBase {
+    public:
+        MixerProcessor(AudioProcessorValueTreeState&);
+        void prepareToPlay(double, int) override;
+        void processBlock(AudioSampleBuffer&, MidiBuffer&) override;
+        void reset() override;
+        const String getName() const override {return "Mixer";}
+    private:
+        AudioProcessorValueTreeState& parameters;
+
+        //==============================================================================
+        std::unique_ptr<AudioProcessorGraph> mixerProcessor;
+
+        using IOProcessor = AudioProcessorGraph::AudioGraphIOProcessor;
+        using Node = AudioProcessorGraph::Node;
+
+        Node::Ptr audioInputNode;
+
+        Node::Ptr leftPreGainUnitNode;
+        Node::Ptr leftToRightGainUnitNode;
+        Node::Ptr rightToLeftGainUnitNode;
+        Node::Ptr rightPreGainUnitNode;
+
+        Node::Ptr audioOutputNode;
+
+        //==============================================================================
+        JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MixerProcessor)
+    };
 }

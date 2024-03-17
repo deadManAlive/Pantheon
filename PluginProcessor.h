@@ -58,14 +58,7 @@ private:
 
     Node::Ptr audioInputNode;
     Node::Ptr preProcessorNode;
-
-    Node::Ptr leftPreGainUnitNode;
-    Node::Ptr leftToRightGainUnitNode;
-    Node::Ptr rightToLeftGainUnitNode;
-    Node::Ptr rightPreGainUnitNode;
-
-    // Node::Ptr leftPostProcessorNode;
-    // Node::Ptr rightPostProcessorNode;
+    Node::Ptr mixerProcessorNode;
     Node::Ptr audioOutputNode;
 
     //==============================================================================
