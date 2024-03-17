@@ -105,6 +105,8 @@ void AudioPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPer
 
     audioInputNode = mainProcessor->addNode(std::make_unique<IOProcessor>(IOProcessor::audioInputNode));
 
+    // TODO: refactor these bullshits to dedicated fx/mixer processor components.
+    // NOTE: necessary for pre-post fx switching
     preProcessorNode = mainProcessor->addNode(std::make_unique<process::PreProcessor>(apvts));
 
     leftPreGainUnitNode = mainProcessor->addNode(std::make_unique<process::MixerProcessor<Left, Left>>(apvts));
