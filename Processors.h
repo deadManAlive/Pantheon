@@ -120,53 +120,53 @@ namespace process {
         }
     };
 
-    //==============================================================================
-    template<Channel C>
-    class PostProcessor : public PantheonProcessorBase {
-    public:
-        PostProcessor(AudioProcessorValueTreeState& apvts)
-            : parameters(apvts)
-        {
-        }
+    // //==============================================================================
+    // template<Channel C>
+    // class PostProcessor : public PantheonProcessorBase {
+    // public:
+    //     PostProcessor(AudioProcessorValueTreeState& apvts)
+    //         : parameters(apvts)
+    //     {
+    //     }
 
-        void prepareToPlay(double sampleRate, int samplesPerBlock) override {
-            panner.setRule(juce::dsp::PannerRule::balanced);
-            panner.prepare(
-            {sampleRate, (uint32)samplesPerBlock, 2}
-            );
-        }
+    //     void prepareToPlay(double sampleRate, int samplesPerBlock) override {
+    //         panner.setRule(juce::dsp::PannerRule::balanced);
+    //         panner.prepare(
+    //         {sampleRate, (uint32)samplesPerBlock, 2}
+    //         );
+    //     }
         
-        void processBlock(AudioSampleBuffer& buffer, MidiBuffer&) override {
-            updateParameter();
+    //     void processBlock(AudioSampleBuffer& buffer, MidiBuffer&) override {
+    //         updateParameter();
 
-            dsp::AudioBlock<float>block(buffer);
-            dsp::ProcessContextReplacing<float>context(block);
+    //         dsp::AudioBlock<float>block(buffer);
+    //         dsp::ProcessContextReplacing<float>context(block);
 
-            panner.process(context);
-        }
+    //         panner.process(context);
+    //     }
 
-        void reset() override {
-            panner.reset();
-        }
+    //     void reset() override {
+    //         panner.reset();
+    //     }
         
-        const String getName() const override {
-            return "Post";
-        }
-    private:
-        //==============================================================================
-        AudioProcessorValueTreeState& parameters;
-        dsp::Panner<float> panner;
+    //     const String getName() const override {
+    //         return "Post";
+    //     }
+    // private:
+    //     //==============================================================================
+    //     AudioProcessorValueTreeState& parameters;
+    //     dsp::Panner<float> panner;
         
-        //==============================================================================
-        static constexpr const char* z = C == Channel::Left ? "leftPan" : "rightPan";
+    //     //==============================================================================
+    //     static constexpr const char* z = C == Channel::Left ? "leftPan" : "rightPan";
 
-        //==============================================================================
-        void updateParameter() {
-            const auto panValue = parameters.getRawParameterValue(z)->load();
-            panner.setPan(panValue);
-        }
+    //     //==============================================================================
+    //     void updateParameter() {
+    //         const auto panValue = parameters.getRawParameterValue(z)->load();
+    //         panner.setPan(panValue);
+    //     }
 
-        //==============================================================================
-        JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PostProcessor)
-    };
+    //     //==============================================================================
+    //     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PostProcessor)
+    // };
 }

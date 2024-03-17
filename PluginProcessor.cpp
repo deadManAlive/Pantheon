@@ -112,8 +112,8 @@ void AudioPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPer
     rightToLeftGainUnitNode = mainProcessor->addNode(std::make_unique<process::MixerProcessor<Right, Left>>(apvts));
     rightPreGainUnitNode = mainProcessor->addNode(std::make_unique<process::MixerProcessor<Right, Right>>(apvts));
 
-    leftPostProcessorNode = mainProcessor->addNode(std::make_unique<process::PostProcessor<Left>>(apvts));
-    rightPostProcessorNode = mainProcessor->addNode(std::make_unique<process::PostProcessor<Right>>(apvts));
+    // leftPostProcessorNode = mainProcessor->addNode(std::make_unique<process::PostProcessor<Left>>(apvts));
+    // rightPostProcessorNode = mainProcessor->addNode(std::make_unique<process::PostProcessor<Right>>(apvts));
 
     audioOutputNode = mainProcessor->addNode(std::make_unique<IOProcessor>(IOProcessor::audioOutputNode));
 
@@ -125,45 +125,61 @@ void AudioPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPer
 
         if (ch == Left) {
             // Pre.L -> LL
-            mainProcessor->addConnection({{preProcessorNode->nodeID, Left}, 
+            mainProcessor->addConnection({{preProcessorNode->nodeID, ch}, 
                                           {leftPreGainUnitNode->nodeID, 0}});
 
             // Pre.L -> LR
-            mainProcessor->addConnection({{preProcessorNode->nodeID, Left},
+            mainProcessor->addConnection({{preProcessorNode->nodeID, ch},
                                           {leftToRightGainUnitNode->nodeID, 0}});
+            
+            // LL => OUT.L
+            mainProcessor->addConnection({{leftPreGainUnitNode->nodeID, 0},                
+                                          {audioOutputNode->nodeID, ch}});
+            
+            // RL => OUT.L
+            mainProcessor->addConnection({{rightToLeftGainUnitNode->nodeID, 0},                
+                                          {audioOutputNode->nodeID, ch}});
         } else {
             // Pre.R -> RR
-            mainProcessor->addConnection({{preProcessorNode->nodeID, Right},
+            mainProcessor->addConnection({{preProcessorNode->nodeID, ch},
                                           {rightPreGainUnitNode->nodeID, 0}});
 
             // Pre.R -> RL
-            mainProcessor->addConnection({{preProcessorNode->nodeID, Right},
+            mainProcessor->addConnection({{preProcessorNode->nodeID, ch},
                                           {rightToLeftGainUnitNode->nodeID, 0}});
+            
+            // RR => OUT.R
+            mainProcessor->addConnection({{rightPreGainUnitNode->nodeID, 0},                
+                                          {audioOutputNode->nodeID, ch}});
+
+            // LR => OUT.R
+            mainProcessor->addConnection({{leftToRightGainUnitNode->nodeID, 0},                
+                                          {audioOutputNode->nodeID, ch}});
         }
 
-        // LL => Post.L
-        mainProcessor->addConnection({{leftPreGainUnitNode->nodeID, 0},
-                                      {leftPostProcessorNode->nodeID, ch}});
+        // // LL => Post.L
+        // mainProcessor->addConnection({{leftPreGainUnitNode->nodeID, 0},
+        //                               {leftPostProcessorNode->nodeID, ch}});
 
-        // RL => Post.L
-        mainProcessor->addConnection({{rightToLeftGainUnitNode->nodeID, 0},
-                                      {leftPostProcessorNode->nodeID, ch}});
+        // // RL => Post.L
+        // mainProcessor->addConnection({{rightToLeftGainUnitNode->nodeID, 0},
+        //                               {leftPostProcessorNode->nodeID, ch}});
 
-        // RR => Post.R
-        mainProcessor->addConnection({{rightPreGainUnitNode->nodeID, 0},
-                                      {rightPostProcessorNode->nodeID, ch}});
+        // // RR => Post.R
+        // mainProcessor->addConnection({{rightPreGainUnitNode->nodeID, 0},
+        //                               {rightPostProcessorNode->nodeID, ch}});
 
-        // LR => Post.R
-        mainProcessor->addConnection({{leftToRightGainUnitNode->nodeID, 0},
-                                      {rightPostProcessorNode->nodeID, ch}});
+        // // LR => Post.R
+        // mainProcessor->addConnection({{leftToRightGainUnitNode->nodeID, 0},
+        //                               {rightPostProcessorNode->nodeID, ch}});
 
-        // Post.L -> OUT
-        mainProcessor->addConnection({{leftPostProcessorNode->nodeID, ch},
-                                     {audioOutputNode->nodeID, ch}});
+        // // Post.L -> OUT
+        // mainProcessor->addConnection({{leftPostProcessorNode->nodeID, ch},
+        //                              {audioOutputNode->nodeID, ch}});
 
-        // Post.R -> OUT
-        mainProcessor->addConnection({{rightPostProcessorNode->nodeID, ch},
-                                      {audioOutputNode->nodeID, ch}});
+        // // Post.R -> OUT
+        // mainProcessor->addConnection({{rightPostProcessorNode->nodeID, ch},
+        //                               {audioOutputNode->nodeID, ch}});
     }
 }
 
@@ -306,25 +322,25 @@ AudioProcessorValueTreeState::ParameterLayout AudioPluginAudioProcessor::createP
         )
     );
 
-    // LEFT PAN
-    parameterLayout.add(
-        std::make_unique<AudioParameterFloat>(
-            "leftPan",
-            "Left Pan",
-            NormalisableRange<float>{-1.f, 1.f},
-            -1.f
-        )
-    );
+    // // LEFT PAN
+    // parameterLayout.add(
+    //     std::make_unique<AudioParameterFloat>(
+    //         "leftPan",
+    //         "Left Pan",
+    //         NormalisableRange<float>{-1.f, 1.f},
+    //         -1.f
+    //     )
+    // );
 
-    // RIGHT PAN
-    parameterLayout.add(
-        std::make_unique<AudioParameterFloat>(
-            "rightPan",
-            "Right Pan",
-            NormalisableRange<float>{-1.f, 1.f},
-            1.f
-        )
-    );
+    // // RIGHT PAN
+    // parameterLayout.add(
+    //     std::make_unique<AudioParameterFloat>(
+    //         "rightPan",
+    //         "Right Pan",
+    //         NormalisableRange<float>{-1.f, 1.f},
+    //         1.f
+    //     )
+    // );
 
     // FX POSITION
     // NOTE: true = pre, false = post.

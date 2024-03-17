@@ -64,8 +64,8 @@ private:
     Node::Ptr rightToLeftGainUnitNode;
     Node::Ptr rightPreGainUnitNode;
 
-    Node::Ptr leftPostProcessorNode;
-    Node::Ptr rightPostProcessorNode;
+    // Node::Ptr leftPostProcessorNode;
+    // Node::Ptr rightPostProcessorNode;
     Node::Ptr audioOutputNode;
 
     //==============================================================================
