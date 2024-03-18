@@ -2,6 +2,7 @@
 
 #include <JuceHeader.h>
 #include <atomic>
+#include <atomic>
 #include <memory>
 
 //==============================================================================
@@ -214,6 +215,7 @@ namespace process {
         const String getName() const override {return "Fx";}
     private:
         AudioProcessorValueTreeState& parameters;
+
 
         //==============================================================================
         template <Channel CHANNEL>
