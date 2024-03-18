@@ -1,4 +1,5 @@
 #include "Processors.h"
+#include <memory>
 
 namespace process {
     //==============================================================================
@@ -41,70 +42,157 @@ namespace process {
     //==============================================================================
     MixerProcessor::MixerProcessor(AudioProcessorValueTreeState& apvts)
         : parameters(apvts)
-        , mixerProcessor(new AudioProcessorGraph{})
+        , mixerProcessorGraph(new AudioProcessorGraph{})
     {
     }
 
     void MixerProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
         //==============================================================================
-        mixerProcessor->setPlayConfigDetails(getMainBusNumInputChannels(),
+        mixerProcessorGraph->setPlayConfigDetails(getMainBusNumInputChannels(),
                                         getMainBusNumOutputChannels(),
                                         sampleRate, samplesPerBlock);
-        mixerProcessor->prepareToPlay(sampleRate, samplesPerBlock);
-        mixerProcessor->clear();
+        mixerProcessorGraph->prepareToPlay(sampleRate, samplesPerBlock);
+        mixerProcessorGraph->clear();
 
         //==============================================================================
-        audioInputNode = mixerProcessor->addNode(std::make_unique<IOProcessor>(IOProcessor::audioInputNode));
-        audioOutputNode = mixerProcessor->addNode(std::make_unique<IOProcessor>(IOProcessor::audioOutputNode));
+        audioInputNode = mixerProcessorGraph->addNode(std::make_unique<IOProcessor>(IOProcessor::audioInputNode));
+        audioOutputNode = mixerProcessorGraph->addNode(std::make_unique<IOProcessor>(IOProcessor::audioOutputNode));
 
-        leftPreGainUnitNode = mixerProcessor->addNode(std::make_unique<MixerUnit<Left, Left>>(parameters));
-        leftToRightGainUnitNode = mixerProcessor->addNode(std::make_unique<MixerUnit<Left, Right>>(parameters));
-        rightToLeftGainUnitNode = mixerProcessor->addNode(std::make_unique<MixerUnit<Right, Left>>(parameters));
-        rightPreGainUnitNode = mixerProcessor->addNode(std::make_unique<MixerUnit<Right, Right>>(parameters));
+        leftPreGainUnitNode = mixerProcessorGraph->addNode(std::make_unique<MixerUnit<Left, Left>>(parameters));
+        leftToRightGainUnitNode = mixerProcessorGraph->addNode(std::make_unique<MixerUnit<Left, Right>>(parameters));
+        rightToLeftGainUnitNode = mixerProcessorGraph->addNode(std::make_unique<MixerUnit<Right, Left>>(parameters));
+        rightPreGainUnitNode = mixerProcessorGraph->addNode(std::make_unique<MixerUnit<Right, Right>>(parameters));
 
         //==============================================================================
         for (int ch = 0; ch < 2; ++ch) {
             if (ch == Left) {
                 // IN.L -> LL
-                mixerProcessor->addConnection({{audioInputNode->nodeID, ch}, 
+                mixerProcessorGraph->addConnection({{audioInputNode->nodeID, ch}, 
                                             {leftPreGainUnitNode->nodeID, 0}});
 
                 // IN.L -> LR
-                mixerProcessor->addConnection({{audioInputNode->nodeID, ch},
+                mixerProcessorGraph->addConnection({{audioInputNode->nodeID, ch},
                                             {leftToRightGainUnitNode->nodeID, 0}});
                 
                 // LL => OUT.L
-                mixerProcessor->addConnection({{leftPreGainUnitNode->nodeID, 0},                
+                mixerProcessorGraph->addConnection({{leftPreGainUnitNode->nodeID, 0},                
                                             {audioOutputNode->nodeID, ch}});
                 
                 // RL => OUT.L
-                mixerProcessor->addConnection({{rightToLeftGainUnitNode->nodeID, 0},                
+                mixerProcessorGraph->addConnection({{rightToLeftGainUnitNode->nodeID, 0},                
                                             {audioOutputNode->nodeID, ch}});
             } else {
                 // IN.R -> RR
-                mixerProcessor->addConnection({{audioInputNode->nodeID, ch},
+                mixerProcessorGraph->addConnection({{audioInputNode->nodeID, ch},
                                             {rightPreGainUnitNode->nodeID, 0}});
 
                 // IN.R -> RL
-                mixerProcessor->addConnection({{audioInputNode->nodeID, ch},
+                mixerProcessorGraph->addConnection({{audioInputNode->nodeID, ch},
                                             {rightToLeftGainUnitNode->nodeID, 0}});
                 
                 // RR => OUT.R
-                mixerProcessor->addConnection({{rightPreGainUnitNode->nodeID, 0},                
+                mixerProcessorGraph->addConnection({{rightPreGainUnitNode->nodeID, 0},                
                                             {audioOutputNode->nodeID, ch}});
 
                 // LR => OUT.R
-                mixerProcessor->addConnection({{leftToRightGainUnitNode->nodeID, 0},                
+                mixerProcessorGraph->addConnection({{leftToRightGainUnitNode->nodeID, 0},                
                                             {audioOutputNode->nodeID, ch}});
             }
         }
     }
 
     void MixerProcessor::processBlock(AudioSampleBuffer& buffer, MidiBuffer& midiMessages) {
-        mixerProcessor->processBlock(buffer, midiMessages);
+        mixerProcessorGraph->processBlock(buffer, midiMessages);
     }
 
     void MixerProcessor::reset() {
-        mixerProcessor->reset();
+        mixerProcessorGraph->reset();
     }
+
+    //==============================================================================
+    FxProcessor::FxProcessor(AudioProcessorValueTreeState& apvts)
+        : parameters(apvts)
+        , fxProcessorGraph(new AudioProcessorGraph{})
+    {
+    }
+
+    void FxProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
+        //==============================================================================
+        fxProcessorGraph->setPlayConfigDetails(getMainBusNumInputChannels(),
+                                        getMainBusNumOutputChannels(),
+                                        sampleRate, samplesPerBlock);
+        fxProcessorGraph->prepareToPlay(sampleRate, samplesPerBlock);
+        fxProcessorGraph->clear();
+    
+        //==============================================================================
+        audioInputNode = fxProcessorGraph->addNode(std::make_unique<IOProcessor>(IOProcessor::audioInputNode));
+        leftFxNode = fxProcessorGraph->addNode(std::make_unique<LeftFxUnit>(parameters));
+        rightFxNode = fxProcessorGraph->addNode(std::make_unique<RightFxUnit>(parameters));
+        audioOutputNode = fxProcessorGraph->addNode(std::make_unique<IOProcessor>(IOProcessor::audioOutputNode));
+    
+        // IN.L -> FXL
+        fxProcessorGraph->addConnection({
+            {audioInputNode->nodeID, 0},
+            {leftFxNode->nodeID, 0},
+        });
+
+        // IN.R -> FXR
+        fxProcessorGraph->addConnection({
+            {audioInputNode->nodeID, 1},
+            {rightFxNode->nodeID, 0},
+        });
+
+        // FXL -> OUT.L
+        fxProcessorGraph->addConnection({
+            {leftFxNode->nodeID, 0},
+            {audioOutputNode->nodeID, 0},
+        });
+
+        // FXR -> OUT.R
+        fxProcessorGraph->addConnection({
+            {rightFxNode->nodeID, 0},
+            {audioOutputNode->nodeID, 1},
+        });
+    }
+
+    void FxProcessor::processBlock(AudioSampleBuffer& buffer, MidiBuffer& midiMessages) {
+        ignoreUnused(buffer);
+        
+        fxProcessorGraph->processBlock(buffer, midiMessages);
+    }
+
+    void FxProcessor::reset() {
+        fxProcessorGraph->reset();
+    }
+
+
+    // FxProcessor::FxUnit::FxUnit(AudioProcessorValueTreeState& apvts)
+    //     : parameters(apvts)
+    //     , fxUnitProcessor(new FxProcess{})
+    // {
+    // }
+
+    // void FxProcessor::FxUnit::prepareToPlay(double sampleRate, int samplesPerBlock) {
+    //     fxUnitProcessor->get<0>().setMaximumDelayInSamples(samplesPerBlock / 2);
+    //     fxUnitProcessor->prepare(
+    //         {sampleRate, (uint32)samplesPerBlock, 1}
+    //     );
+    // }
+
+    // void FxProcessor::FxUnit::processBlock(AudioSampleBuffer& buffer, MidiBuffer&) {
+    //     updateParameter();
+
+    //     dsp::AudioBlock<float>block(buffer);
+    //     dsp::ProcessContextReplacing<float>context(block);
+
+    //     fxUnitProcessor->process(context);
+    // }
+
+    // void FxProcessor::FxUnit::reset() {
+    //     fxUnitProcessor->reset();
+    // }
+
+    // void FxProcessor::FxUnit::updateParameter() {
+
+    // }
 }
