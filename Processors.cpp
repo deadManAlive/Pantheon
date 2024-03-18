@@ -4,14 +4,15 @@ namespace process {
     //==============================================================================
     PreProcessor::PreProcessor(AudioProcessorValueTreeState& apvts)
         : parameters(apvts)
+        , preProcessorChain(new dsp::ProcessorChain<dsp::Gain<float>, dsp::Panner<float>>{})
     {
     }
 
     void PreProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
-        preProcessorChain.get<0>().setRampDurationSeconds((double)samplesPerBlock / sampleRate);
-        preProcessorChain.get<1>().setRule(dsp::PannerRule::squareRoot3dB);
+        preProcessorChain->get<0>().setRampDurationSeconds((double)samplesPerBlock / sampleRate);
+        preProcessorChain->get<1>().setRule(dsp::PannerRule::squareRoot3dB);
 
-        preProcessorChain.prepare(
+        preProcessorChain->prepare(
             {sampleRate, (uint32)samplesPerBlock, 2}
         );
     }
@@ -22,7 +23,7 @@ namespace process {
         dsp::AudioBlock<float>block(buffer);
         dsp::ProcessContextReplacing<float>context(block);
 
-        preProcessorChain.process(context);
+        preProcessorChain->process(context);
     }
 
     void PreProcessor::reset() {
@@ -31,10 +32,10 @@ namespace process {
 
     void PreProcessor::updateParameter() {
         const auto gainValue = parameters.getRawParameterValue("inputGain")->load();
-        preProcessorChain.get<0>().setGainLinear(gainValue);
+        preProcessorChain->get<0>().setGainLinear(gainValue);
 
         const auto panValue = parameters.getRawParameterValue("inputPan")->load();
-        preProcessorChain.get<1>().setPan(panValue);
+        preProcessorChain->get<1>().setPan(panValue);
     }
 
     //==============================================================================

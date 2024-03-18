@@ -1,6 +1,5 @@
 #pragma once
 
-#include "juce_core/system/juce_PlatformDefs.h"
 #include <JuceHeader.h>
 #include <memory>
 
@@ -57,7 +56,7 @@ namespace process {
     private:
         //==============================================================================
         AudioProcessorValueTreeState& parameters;
-        dsp::ProcessorChain<dsp::Gain<float>, dsp::Panner<float>> preProcessorChain;
+        std::unique_ptr<dsp::ProcessorChain<dsp::Gain<float>, dsp::Panner<float>>> preProcessorChain;
         void updateParameter();
 
         //==============================================================================
@@ -77,12 +76,13 @@ namespace process {
             : PantheonProcessorBase(BusesProperties().withInput ("Input", juce::AudioChannelSet::mono())
                                            .withOutput ("Output", juce::AudioChannelSet::mono()))
             , parameters(apvts)
+            , gain(new dsp::Gain<float>{})
         {
         }
 
         void prepareToPlay(double sampleRate, int samplesPerBlock) override {
-            gain.setRampDurationSeconds((double)samplesPerBlock / sampleRate);
-            gain.prepare(
+            gain->setRampDurationSeconds((double)samplesPerBlock / sampleRate);
+            gain->prepare(
                 {sampleRate, (uint32)samplesPerBlock, 1}
             );
         }
@@ -93,7 +93,7 @@ namespace process {
             dsp::AudioBlock<float>block(buffer);
             dsp::ProcessContextReplacing<float>context(block);
 
-            gain.process(context);
+            gain->process(context);
         }
 
         void reset() override {
@@ -105,7 +105,7 @@ namespace process {
     private:
         //==============================================================================
         AudioProcessorValueTreeState& parameters;
-        dsp::Gain<float> gain;
+        std::unique_ptr<dsp::Gain<float>> gain;
 
         //==============================================================================
         static constexpr const char* directions[4] = {"leftPreGain",
@@ -117,7 +117,7 @@ namespace process {
 
         void updateParameter() {
             const auto gainValue = parameters.getRawParameterValue(z)->load();
-            gain.setGainLinear(gainValue);
+            gain->setGainLinear(gainValue);
         }
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MixerUnit)
@@ -201,5 +201,20 @@ namespace process {
 
         //==============================================================================
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MixerProcessor)
+    };
+
+    //==============================================================================
+    class FxProcessor : public PantheonProcessorBase {
+    public:
+        FxProcessor(AudioProcessorValueTreeState&);
+        void prepareToPlay(double, int) override;
+        void processBlock(AudioSampleBuffer&, MidiBuffer&) override;
+        void reset() override;
+        const String getName() const override {return "Fx";}
+    private:
+        AudioProcessorValueTreeState& parameters;
+        
+        //==============================================================================
+
     };
 }
