@@ -15,7 +15,7 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
                      #endif
                        )
     , apvts(*this, nullptr, "PARAMETERS", createParameterLayout())
-    , mainProcessor(new AudioProcessorGraph())
+    , mainProcessorGraph(new AudioProcessorGraph())
 {
 }
 
@@ -94,28 +94,36 @@ void AudioPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPer
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
     // prepare APG
-    mainProcessor->setPlayConfigDetails(getMainBusNumInputChannels(),
+    mainProcessorGraph->setPlayConfigDetails(getMainBusNumInputChannels(),
                                         getMainBusNumOutputChannels(),
                                         sampleRate, samplesPerBlock);
-    mainProcessor->prepareToPlay(sampleRate, samplesPerBlock);
-    mainProcessor->clear();
+    mainProcessorGraph->prepareToPlay(sampleRate, samplesPerBlock);
+    mainProcessorGraph->clear();
 
     //==============================================================================
-    audioInputNode = mainProcessor->addNode(std::make_unique<IOProcessor>(IOProcessor::audioInputNode));
-    preProcessorNode = mainProcessor->addNode(std::make_unique<process::PreProcessor>(apvts));
-    mixerProcessorNode = mainProcessor->addNode(std::make_unique<process::MixerProcessor>(apvts));
-    audioOutputNode = mainProcessor->addNode(std::make_unique<IOProcessor>(IOProcessor::audioOutputNode));
+    audioInputNode = mainProcessorGraph->addNode(std::make_unique<IOProcessor>(IOProcessor::audioInputNode));
+    preProcessorNode = mainProcessorGraph->addNode(std::make_unique<process::PreProcessor>(apvts));
+    fxProcessorNode = mainProcessorGraph->addNode(std::make_unique<process::FxProcessor>(apvts));
+    mixerProcessorNode = mainProcessorGraph->addNode(std::make_unique<process::MixerProcessor>(apvts));
+    audioOutputNode = mainProcessorGraph->addNode(std::make_unique<IOProcessor>(IOProcessor::audioOutputNode));
 
     for (int ch = 0; ch < 2; ++ch) {
-        mainProcessor->addConnection({
+        mainProcessorGraph->addConnection({
             {audioInputNode->nodeID, ch},
             {preProcessorNode->nodeID, ch},
         });
-        mainProcessor->addConnection({
+
+        mainProcessorGraph->addConnection({
             {preProcessorNode->nodeID, ch},
+            {fxProcessorNode->nodeID, ch},
+        });
+        
+        mainProcessorGraph->addConnection({
+            {fxProcessorNode->nodeID, ch},
             {mixerProcessorNode->nodeID, ch},
         });
-        mainProcessor->addConnection({
+        
+        mainProcessorGraph->addConnection({
             {mixerProcessorNode->nodeID, ch},
             {audioOutputNode->nodeID, ch},
         });
@@ -126,7 +134,7 @@ void AudioPluginAudioProcessor::releaseResources()
 {
     // When playback stops, you can use this as an opportunity to free up any
     // spare memory, etc.
-    mainProcessor->releaseResources();
+    mainProcessorGraph->releaseResources();
 }
 
 bool AudioPluginAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
@@ -169,7 +177,7 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
     
-    mainProcessor->processBlock(buffer, midiMessages);
+    mainProcessorGraph->processBlock(buffer, midiMessages);
 }
 
 //==============================================================================

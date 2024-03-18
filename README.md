@@ -1,6 +1,6 @@
 # TI Pantheon
 
-Stereo shaper plugin. Based on FL Stereo Shaper.
+Overly complicated panning plugin (a.k.a stereo shaper). Based on FL Stereo Shaper.
 
 ## Build
 

@@ -54,10 +54,11 @@ private:
     using IOProcessor = AudioProcessorGraph::AudioGraphIOProcessor;
     using Node = AudioProcessorGraph::Node;
 
-    std::unique_ptr<AudioProcessorGraph> mainProcessor;
+    std::unique_ptr<AudioProcessorGraph> mainProcessorGraph;
 
     Node::Ptr audioInputNode;
     Node::Ptr preProcessorNode;
+    Node::Ptr fxProcessorNode;
     Node::Ptr mixerProcessorNode;
     Node::Ptr audioOutputNode;
 
