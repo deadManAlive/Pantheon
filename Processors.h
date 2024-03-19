@@ -232,6 +232,8 @@ namespace process {
             void prepareToPlay(double sampleRate, int samplesPerBlock) override {
                 maxDelayInSamples = samplesPerBlock / 2;
 
+                delayParamSmoothedValue.reset(samplesPerBlock / 4);
+
                 fxUnitProcessor->get<0>().setMaximumDelayInSamples(maxDelayInSamples / 2);
                 fxUnitProcessor->prepare(
                     {sampleRate, (uint32)samplesPerBlock, 1}
@@ -254,7 +256,7 @@ namespace process {
             AudioProcessorValueTreeState& parameters;
 
             //==============================================================================
-            int maxDelayInSamples = 44100;
+            int maxDelayInSamples { 128 };
 
             //==============================================================================
             using FxProcess = dsp::ProcessorChain<dsp::DelayLine<float>>;
@@ -262,15 +264,22 @@ namespace process {
             std::unique_ptr<FxProcess> fxUnitProcessor;
 
             //==============================================================================
+            LinearSmoothedValue<float> delayParamSmoothedValue;
+
+            //==============================================================================
             void updateParameter() {
-                auto delayParam = parameters.getRawParameterValue("delayLine");
-                auto delayParamValue = delayParam->load();
+                const auto delayParam = parameters.getRawParameterValue("delayLine");
+                const auto delayParamValue = delayParam->load();
+
+                delayParamSmoothedValue.setTargetValue(delayParamValue);
+
+                const auto currentDelayValue = delayParamSmoothedValue.getNextValue();
 
                 if (CHANNEL == Left) {
-                    const auto delay = abs(jlimit(-1.f, 0.f, delayParamValue)) * (float)maxDelayInSamples;
+                    const auto delay = abs(jlimit(-1.f, 0.f, currentDelayValue)) * static_cast<float>(maxDelayInSamples);
                     fxUnitProcessor->get<0>().setDelay(delay);
                 } else {
-                    const auto delay = jlimit(0.f, 1.f, delayParamValue) * (float)maxDelayInSamples;
+                    const auto delay = jlimit(0.f, 1.f, currentDelayValue) * static_cast<float>(maxDelayInSamples);
                     fxUnitProcessor->get<0>().setDelay(delay);
                 }
             }
