@@ -164,35 +164,4 @@ namespace process {
     void FxProcessor::reset() {
         fxProcessorGraph->reset();
     }
-
-
-    // FxProcessor::FxUnit::FxUnit(AudioProcessorValueTreeState& apvts)
-    //     : parameters(apvts)
-    //     , fxUnitProcessor(new FxProcess{})
-    // {
-    // }
-
-    // void FxProcessor::FxUnit::prepareToPlay(double sampleRate, int samplesPerBlock) {
-    //     fxUnitProcessor->get<0>().setMaximumDelayInSamples(samplesPerBlock / 2);
-    //     fxUnitProcessor->prepare(
-    //         {sampleRate, (uint32)samplesPerBlock, 1}
-    //     );
-    // }
-
-    // void FxProcessor::FxUnit::processBlock(AudioSampleBuffer& buffer, MidiBuffer&) {
-    //     updateParameter();
-
-    //     dsp::AudioBlock<float>block(buffer);
-    //     dsp::ProcessContextReplacing<float>context(block);
-
-    //     fxUnitProcessor->process(context);
-    // }
-
-    // void FxProcessor::FxUnit::reset() {
-    //     fxUnitProcessor->reset();
-    // }
-
-    // void FxProcessor::FxUnit::updateParameter() {
-
-    // }
 }

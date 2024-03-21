@@ -21,7 +21,6 @@ target_sources(Pantheon
     MixerComponent.cpp
     PluginEditor.cpp
     PluginProcessor.cpp
-    PostComponent.cpp
     PreComponent.cpp
     Processors.cpp
 )

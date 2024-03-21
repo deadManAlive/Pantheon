@@ -5,11 +5,8 @@
 //==============================================================================
 AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAudioProcessor& p, AudioProcessorValueTreeState& apvts)
     : AudioProcessorEditor (&p)
-    // , processorRef(p)
-    // , parameters(apvts)
     , mixerComponent(p, apvts)
     , preComponent(p, apvts)
-    // , postComponent(p, apvts)
     , fxComponent(p, apvts)
 {
     panLook.setColour(GroupComponent::outlineColourId, Colours::linen);
@@ -111,7 +108,6 @@ void AudioPluginAudioProcessorEditor::resized()
         GridItem(fxComponent),
         GridItem(mixerComponent).withArea(2, GridItem::Span(2)),
         GridItem(filler).withArea(3, GridItem::Span(2)),
-        // GridItem(postComponent).withArea(4, GridItem::Span(2)),
     };
 
     border.setBounds(getLocalBounds().reduced(4));

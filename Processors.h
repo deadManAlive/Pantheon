@@ -125,56 +125,6 @@ namespace process {
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MixerUnit)
     };
 
-    // //==============================================================================
-    // template<Channel C>
-    // class PostProcessor : public PantheonProcessorBase {
-    // public:
-    //     PostProcessor(AudioProcessorValueTreeState& apvts)
-    //         : parameters(apvts)
-    //     {
-    //     }
-
-    //     void prepareToPlay(double sampleRate, int samplesPerBlock) override {
-    //         panner.setRule(juce::dsp::PannerRule::balanced);
-    //         panner.prepare(
-    //         {sampleRate, (uint32)samplesPerBlock, 2}
-    //         );
-    //     }
-        
-    //     void processBlock(AudioSampleBuffer& buffer, MidiBuffer&) override {
-    //         updateParameter();
-
-    //         dsp::AudioBlock<float>block(buffer);
-    //         dsp::ProcessContextReplacing<float>context(block);
-
-    //         panner.process(context);
-    //     }
-
-    //     void reset() override {
-    //         panner.reset();
-    //     }
-        
-    //     const String getName() const override {
-    //         return "Post";
-    //     }
-    // private:
-    //     //==============================================================================
-    //     AudioProcessorValueTreeState& parameters;
-    //     dsp::Panner<float> panner;
-        
-    //     //==============================================================================
-    //     static constexpr const char* z = C == Channel::Left ? "leftPan" : "rightPan";
-
-    //     //==============================================================================
-    //     void updateParameter() {
-    //         const auto panValue = parameters.getRawParameterValue(z)->load();
-    //         panner.setPan(panValue);
-    //     }
-
-    //     //==============================================================================
-    //     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PostProcessor)
-    // };
-
     //==============================================================================
     class MixerProcessor : public PantheonProcessorBase {
     public:
@@ -305,25 +255,4 @@ namespace process {
         //==============================================================================
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (FxProcessor)
     };
-
-    // class FxProcessor::FxUnit : public PantheonProcessorBase {
-    // public:
-    //     FxUnit(AudioProcessorValueTreeState&);
-    //     void prepareToPlay(double, int) override;
-    //     void processBlock(AudioSampleBuffer&, MidiBuffer&) override;
-    //     void reset() override;
-    //     const String getName() const override {return "FxUnit";}
-
-    // private:
-    //     AudioProcessorValueTreeState& parameters;
-
-    //     //==============================================================================
-    //     using FxProcess = dsp::ProcessorChain<dsp::DelayLine<float>>;
-
-    //     std::unique_ptr<FxProcess> fxUnitProcessor;
-
-    //     void updateParameter();
-    //     //==============================================================================
-    //     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (FxUnit)
-    // };
 }
