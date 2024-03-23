@@ -1,8 +1,10 @@
 #pragma once
 
+#include "juce_core/system/juce_PlatformDefs.h"
 #include <JuceHeader.h>
 #include <atomic>
 #include <atomic>
+#include <cmath>
 #include <memory>
 
 //==============================================================================
@@ -181,7 +183,8 @@ namespace process {
 
             void prepareToPlay(double sampleRate, int samplesPerBlock) override {
                 maxDelayInSamples = samplesPerBlock / 2;
-                _sampleRate = sampleRate / 2;
+                _sampleRate = sampleRate;
+                logNyquist = log10(sampleRate / 2);
 
                 delayParamSmoothedValue.reset(samplesPerBlock / 4);
                 filterParamSmoothedValue.reset(samplesPerBlock / 4);
@@ -212,6 +215,7 @@ namespace process {
             //==============================================================================
             int maxDelayInSamples { 128 };
             double _sampleRate { 44100. };
+            double logNyquist { 1. };
 
             //==============================================================================
             using FxProcess = dsp::ProcessorChain<dsp::DelayLine<float>, dsp::IIR::Filter<float>>;
@@ -243,14 +247,16 @@ namespace process {
 
                 if (CHANNEL == Left) {
                     delay = abs(jlimit(-1.f, 0.f, currentDelayValue)) * static_cast<float>(maxDelayInSamples);
-                    filter = abs(jlimit(-1.f, 0.f, currentFilterValue)) * static_cast<float>(_sampleRate / 2);
+                    filter = (1.f - abs(jlimit(-1.f, 0.f, currentFilterValue))) * static_cast<float>(logNyquist);
                 } else {
                     delay = jlimit(0.f, 1.f, currentDelayValue) * static_cast<float>(maxDelayInSamples);
-                    filter = jlimit(0.f, 1.f, currentDelayValue) * static_cast<float>(_sampleRate / 2);
+                    filter = (1.f - jlimit(0.f, 1.f, currentFilterValue)) * static_cast<float>(logNyquist);
                 }
 
+                filter = pow(10.f, static_cast<float>(filter));
+                filter = jlimit(10.f, (float)_sampleRate / 2, filter);
                 fxUnitProcessor->get<0>().setDelay(delay);
-                fxUnitProcessor->get<1>().coefficients = Coefficients::makeAllPass(_sampleRate, filter > 10.f ? filter : 10.f);
+                fxUnitProcessor->get<1>().coefficients = Coefficients::makeAllPass(_sampleRate, filter);
             }
 
             //==============================================================================
