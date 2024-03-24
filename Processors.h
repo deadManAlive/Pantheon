@@ -92,6 +92,8 @@ namespace process {
         }
 
         void processBlock(AudioSampleBuffer& buffer, MidiBuffer&) override {
+            ScopedNoDenormals noDenormals;
+            
             updateParameter();
 
             dsp::AudioBlock<float>block(buffer);
@@ -186,18 +188,22 @@ namespace process {
                 _sampleRate = sampleRate;
                 logNyquist = log10(sampleRate / 2);
 
-                delayParamSmoothedValue.reset(samplesPerBlock / 4);
-                filterParamSmoothedValue.reset(samplesPerBlock / 4);
+                delayParamSmoothedValue.reset(samplesPerBlock / 8);
+                filterParamSmoothedValue.reset(samplesPerBlock / 8);
 
                 fxUnitProcessor->get<0>().setMaximumDelayInSamples(maxDelayInSamples / 2);
-                fxUnitProcessor->get<1>().coefficients = Coefficients::makeAllPass(sampleRate, 10);
+                fxUnitProcessor->get<1>().setType(dsp::FirstOrderTPTFilterType::allpass);
+                fxUnitProcessor->get<1>().setCutoffFrequency((float)sampleRate / 2);
+                fxUnitProcessor->get<2>().setType(dsp::FirstOrderTPTFilterType::allpass);
+                fxUnitProcessor->get<2>().setCutoffFrequency((float)sampleRate / 2);
                 fxUnitProcessor->prepare(
                     {sampleRate, (uint32)samplesPerBlock, 1}
                 );
-                fxUnitProcessor->reset();
             }
 
             void processBlock(AudioSampleBuffer& buffer, MidiBuffer&) override {
+                ScopedNoDenormals noDenormals;
+
                 updateParameter();
 
                 dsp::AudioBlock<float>block(buffer);
@@ -209,6 +215,7 @@ namespace process {
             void reset() override {
                 fxUnitProcessor->reset();
             }
+            
         private:
             AudioProcessorValueTreeState& parameters;
 
@@ -218,8 +225,7 @@ namespace process {
             double logNyquist { 1. };
 
             //==============================================================================
-            using FxProcess = dsp::ProcessorChain<dsp::DelayLine<float>, dsp::IIR::Filter<float>>;
-            using Coefficients = dsp::IIR::Coefficients<float>;
+            using FxProcess = dsp::ProcessorChain<dsp::DelayLine<float>, dsp::FirstOrderTPTFilter<float>, dsp::FirstOrderTPTFilter<float>>; // this is good, for now
 
             std::unique_ptr<FxProcess> fxUnitProcessor;
 
@@ -253,10 +259,12 @@ namespace process {
                     filter = (1.f - jlimit(0.f, 1.f, currentFilterValue)) * static_cast<float>(logNyquist);
                 }
 
+                fxUnitProcessor->get<0>().setDelay(delay);
+                
                 filter = pow(10.f, static_cast<float>(filter));
                 filter = jlimit(10.f, (float)_sampleRate / 2, filter);
-                fxUnitProcessor->get<0>().setDelay(delay);
-                fxUnitProcessor->get<1>().coefficients = Coefficients::makeAllPass(_sampleRate, filter);
+                fxUnitProcessor->get<1>().setCutoffFrequency(filter);
+                fxUnitProcessor->get<2>().setCutoffFrequency(filter);
             }
 
             //==============================================================================
