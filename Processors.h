@@ -215,7 +215,7 @@ namespace process {
             void reset() override {
                 fxUnitProcessor->reset();
             }
-            
+
         private:
             AudioProcessorValueTreeState& parameters;
 
@@ -234,7 +234,6 @@ namespace process {
             LinearSmoothedValue<float> filterParamSmoothedValue;
 
             //==============================================================================
-            // TODO: logarithmize all pass filter slider + why the shit is it inverted in FL?
             void updateParameter() {
                 const auto delayParam = parameters.getRawParameterValue("delayLine");
                 const auto filterParam = parameters.getRawParameterValue("allPassFreq");
