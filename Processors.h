@@ -191,14 +191,12 @@ namespace process {
                 delayParamSmoothedValue.reset(samplesPerBlock / 8);
                 filterParamSmoothedValue.reset(samplesPerBlock / 8);
 
+                fxUnitProcessor->prepare({sampleRate, (uint32)samplesPerBlock, 1});
                 fxUnitProcessor->get<0>().setMaximumDelayInSamples(maxDelayInSamples / 2);
                 fxUnitProcessor->get<1>().setType(dsp::FirstOrderTPTFilterType::allpass);
-                fxUnitProcessor->get<1>().setCutoffFrequency((float)sampleRate / 2);
+                fxUnitProcessor->get<1>().setCutoffFrequency((float)sampleRate / two);
                 fxUnitProcessor->get<2>().setType(dsp::FirstOrderTPTFilterType::allpass);
-                fxUnitProcessor->get<2>().setCutoffFrequency((float)sampleRate / 2);
-                fxUnitProcessor->prepare(
-                    {sampleRate, (uint32)samplesPerBlock, 1}
-                );
+                fxUnitProcessor->get<2>().setCutoffFrequency((float)sampleRate / two);
             }
 
             void processBlock(AudioSampleBuffer& buffer, MidiBuffer&) override {
@@ -223,6 +221,7 @@ namespace process {
             int maxDelayInSamples { 128 };
             double _sampleRate { 44100. };
             double logNyquist { 1. };
+            static constexpr float two { 2.01f };
 
             //==============================================================================
             using FxProcess = dsp::ProcessorChain<dsp::DelayLine<float>, dsp::FirstOrderTPTFilter<float>, dsp::FirstOrderTPTFilter<float>>; // this is good, for now
@@ -235,14 +234,11 @@ namespace process {
 
             //==============================================================================
             void updateParameter() {
-                const auto delayParam = parameters.getRawParameterValue("delayLine");
-                const auto filterParam = parameters.getRawParameterValue("allPassFreq");
+                const float delayParam = *parameters.getRawParameterValue("delayLine");
+                const float filterParam = *parameters.getRawParameterValue("allPassFreq");
 
-                const auto delayParamValue = delayParam->load();
-                const auto filterParamValue = filterParam->load();
-
-                delayParamSmoothedValue.setTargetValue(delayParamValue);
-                filterParamSmoothedValue.setTargetValue(filterParamValue);
+                delayParamSmoothedValue.setTargetValue(delayParam);
+                filterParamSmoothedValue.setTargetValue(filterParam);
 
                 const auto currentDelayValue = delayParamSmoothedValue.getNextValue();
                 const auto currentFilterValue = filterParamSmoothedValue.getNextValue();
@@ -261,7 +257,7 @@ namespace process {
                 fxUnitProcessor->get<0>().setDelay(delay);
                 
                 filter = pow(10.f, static_cast<float>(filter));
-                filter = jlimit(10.f, (float)_sampleRate / 2, filter);
+                filter = jlimit(10.f, (float)_sampleRate / two, filter);
                 fxUnitProcessor->get<1>().setCutoffFrequency(filter);
                 fxUnitProcessor->get<2>().setCutoffFrequency(filter);
             }
