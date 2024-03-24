@@ -25,6 +25,8 @@ private:
 
     PanLook panLook;
 
+    Label delayLabel;
+    Label filterLabel;
     TextButton preFxButton;
     TextButton postFxButton;
     Slider delayLineSlider;

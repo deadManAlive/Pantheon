@@ -37,6 +37,17 @@ FxComponent::FxComponent(AudioPluginAudioProcessor& p, AudioProcessorValueTreeSt
     addAndMakeVisible(allPassFreqSlider);
     allPassFreqAttachment.reset(new SliderAttachment(parameters, "allPassFreq", allPassFreqSlider));
 
+    delayLabel.setText("Delay", dontSendNotification);
+    delayLabel.setJustificationType(Justification::centred);
+    delayLabel.setColour(Label::textColourId, Colours::linen);
+    delayLabel.setEnabled(false);
+    addAndMakeVisible(delayLabel);
+    filterLabel.setText("Phase", dontSendNotification);
+    filterLabel.setJustificationType(Justification::centred);
+    filterLabel.setColour(Label::textColourId, Colours::linen);
+    filterLabel.setEnabled(false);
+    addAndMakeVisible(filterLabel);
+
     border.setLookAndFeel(&panLook);
     border.setText("Fx");
     border.setEnabled(false);
@@ -62,6 +73,7 @@ void FxComponent::resized() {
         Track(Fr(1)),
         Track(Fr(1)),
         Track(Fr(3)),
+        Track(Fr(1)),
     };
 
     grid.templateColumns = {
@@ -76,6 +88,8 @@ void FxComponent::resized() {
         GridItem(postFxButton),
         GridItem(delayLineSlider),
         GridItem(allPassFreqSlider),
+        GridItem(delayLabel),
+        GridItem(filterLabel),
     };
 
     const auto width = getLocalBounds().getWidth();
