@@ -192,7 +192,7 @@ namespace process {
                 filterParamSmoothedValue.reset(samplesPerBlock / 8);
 
                 fxUnitProcessor->prepare({sampleRate, (uint32)samplesPerBlock, 1});
-                fxUnitProcessor->get<0>().setMaximumDelayInSamples(maxDelayInSamples / 2);
+                fxUnitProcessor->get<0>().setMaximumDelayInSamples(maxDelayInSamples);
                 fxUnitProcessor->get<1>().setType(dsp::FirstOrderTPTFilterType::allpass);
                 fxUnitProcessor->get<1>().setCutoffFrequency((float)sampleRate / two);
                 fxUnitProcessor->get<2>().setType(dsp::FirstOrderTPTFilterType::allpass);

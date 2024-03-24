@@ -177,6 +177,8 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
     
+    updateGraph();
+
     mainProcessorGraph->processBlock(buffer, midiMessages);
 }
 
@@ -277,26 +279,6 @@ AudioProcessorValueTreeState::ParameterLayout AudioPluginAudioProcessor::createP
         )
     );
 
-    // // LEFT PAN
-    // parameterLayout.add(
-    //     std::make_unique<AudioParameterFloat>(
-    //         "leftPan",
-    //         "Left Pan",
-    //         NormalisableRange<float>{-1.f, 1.f},
-    //         -1.f
-    //     )
-    // );
-
-    // // RIGHT PAN
-    // parameterLayout.add(
-    //     std::make_unique<AudioParameterFloat>(
-    //         "rightPan",
-    //         "Right Pan",
-    //         NormalisableRange<float>{-1.f, 1.f},
-    //         1.f
-    //     )
-    // );
-
     // FX POSITION
     // NOTE: true = pre, false = post.
     parameterLayout.add(
@@ -328,6 +310,64 @@ AudioProcessorValueTreeState::ParameterLayout AudioPluginAudioProcessor::createP
     );
 
     return parameterLayout;
+}
+
+void AudioPluginAudioProcessor::updateGraph() {
+    bool isPre = *apvts.getRawParameterValue("fxPosition") > 0.5f;
+    
+    if (isPre != prevIsPre) {
+        for (auto connection : mainProcessorGraph->getConnections()) {
+            mainProcessorGraph->removeConnection(connection);
+        }
+
+        if (isPre) {
+            for (int ch = 0; ch < 2; ++ch) {
+                mainProcessorGraph->addConnection({
+                    {audioInputNode->nodeID, ch},
+                    {preProcessorNode->nodeID, ch},
+                });
+
+                mainProcessorGraph->addConnection({
+                    {preProcessorNode->nodeID, ch},
+                    {fxProcessorNode->nodeID, ch},
+                });
+                
+                mainProcessorGraph->addConnection({
+                    {fxProcessorNode->nodeID, ch},
+                    {mixerProcessorNode->nodeID, ch},
+                });
+                
+                mainProcessorGraph->addConnection({
+                    {mixerProcessorNode->nodeID, ch},
+                    {audioOutputNode->nodeID, ch},
+                });
+            }
+        } else {
+            for (int ch = 0; ch < 2; ++ch) {
+                mainProcessorGraph->addConnection({
+                    {audioInputNode->nodeID, ch},
+                    {preProcessorNode->nodeID, ch},
+                });
+
+                mainProcessorGraph->addConnection({
+                    {preProcessorNode->nodeID, ch},
+                    {mixerProcessorNode->nodeID, ch},
+                });
+                
+                mainProcessorGraph->addConnection({
+                    {mixerProcessorNode->nodeID, ch},
+                    {fxProcessorNode->nodeID, ch},
+                });
+                
+                mainProcessorGraph->addConnection({
+                    {fxProcessorNode->nodeID, ch},
+                    {audioOutputNode->nodeID, ch},
+                });
+            }
+        }
+    }
+
+    prevIsPre = isPre;
 }
 
 //==============================================================================
